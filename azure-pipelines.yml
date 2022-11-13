@@ -1,0 +1,52 @@
+# Node.js Function App to Linux on Azure
+# Build a Node.js function app and deploy it to Azure as a Linux function app.
+# Add steps that analyze code, save build artifacts, deploy, and more:
+# https://docs.microsoft.com/azure/devops/pipelines/languages/javascript
+
+trigger:
+- dev
+
+variables:
+  # Agent VM image name
+  vmImageName: 'ubuntu-latest'
+
+stages:
+- stage: Build
+  displayName: Build stage
+  jobs:
+  - job: Build
+    displayName: Build
+    pool:
+      vmImage: $(vmImageName)
+
+    steps:
+    - task: NodeTool@0
+      inputs:
+        versionSpec: '10.x'
+      displayName: 'Install Node.js'
+
+    - script: |
+        echo 'Import Common module start'
+        git clone https://andowin4us:tzcg5zrn7iep2tiajb6brslthrxwqbti5ezq47ds357ruwl25e7q@dev.azure.com/andowin4us/ParkIt/_git/common
+        npm install
+        npm run build --if-present
+        npm run test --if-present
+      displayName: 'Prepare binaries'
+
+
+- stage: Artifact
+  displayName: Artifact stage
+  dependsOn: Build
+  jobs:
+  - job: ArtifactGenerate
+    steps:
+      - task: ArchiveFiles@2
+        displayName: 'Archive files'
+        inputs:
+          rootFolderOrFile: '$(System.DefaultWorkingDirectory)'
+          includeRootFolder: false
+          archiveType: zip
+          archiveFile: $(Build.ArtifactStagingDirectory)/$(Build.BuildId).zip
+          replaceExistingArchive: true
+      - upload: $(Build.ArtifactStagingDirectory)/$(Build.BuildId).zip
+        artifact: drop
